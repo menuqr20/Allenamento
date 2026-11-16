@@ -28,6 +28,7 @@ button,input,select{font:inherit;color:inherit}
 .stat{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;backdrop-filter:blur(8px);transform:perspective(600px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .15s}
 .stat::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--acc),var(--acc2))}
 .stat b{display:block;font-size:1.7rem;line-height:1.15;text-shadow:0 0 18px rgba(124,92,255,.8);font-variant-numeric:tabular-nums}
+.stat:nth-child(5){grid-column:span 2}
 .stat span{color:var(--mute);font-size:.85rem}
 .stat small{display:block;color:var(--mute);font-size:.72rem}
 .bar{height:4px;border-radius:4px;background:var(--soft);margin-top:6px;overflow:hidden}
@@ -93,7 +94,7 @@ var FL=FOODS.map(function(f){return'<option value="'+f.n.replace(/"/g,'&quot;')+
 function findFood(n){n=n.trim().toLowerCase();if(!n)return null;var m=FOODS.filter(function(f){return f.n.toLowerCase()===n});if(m.length)return m[0];var c=FOODS.filter(function(f){return f.n.toLowerCase().indexOf(n)===0});return c.length===1?c[0]:null}
 function streak(){var d=new Date(),c=0,days={};S.work.forEach(function(x){days[x.d]=1});if(!days[key(d)])d.setDate(d.getDate()-1);while(days[key(d)]){c++;d.setDate(d.getDate()-1)}return c}
 function heroHtml(){var s=streak(),tp=S.work.reduce(function(a,x){return a+(x.ped||0)},0);
-  return '<div class="hero"><div class="scene"><div class="sys"><div class="planet"></div><div class="ring"></div><div class="orbit"><i></i></div></div></div><div><strong>Diario allenamenti</strong><span>'+(s?s+(s===1?' giorno':' giorni')+' di fila con un allenamento':'Registra un allenamento per iniziare la serie')+'</span><span class="odo">'+fmt(tp)+' pedalate totali</span></div></div>'}
+  return '<div class="hero"><div class="scene"><div class="sys"><div class="planet"></div><div class="ring"></div><div class="orbit"><i></i></div></div></div><div><strong>Diario allenamenti</strong><span>'+(s?s+(s===1?' giorno':' giorni')+' di fila con un allenamento':'Registra un allenamento per iniziare la serie')+'</span><span class="odo">'+fmt(tp)+' pedalate · '+fmt(S.work.reduce(function(a,x){return a+(x.st||0)},0))+' passi totali</span></div></div>'}
 function chart(ws){if(ws.length<2)return '<p class="empty">Registra almeno due pesi per vedere il grafico.</p>';
   var ks=ws.map(function(x){return x.kg}),mn=Math.min.apply(null,ks)-.5,mx=Math.max.apply(null,ks)+.5,W=300,H=120,P=10;
   var pts=ws.map(function(x,i){return[P+i*(W-2*P)/(ws.length-1),P+(mx-x.kg)/(mx-mn)*(H-2*P)]});
@@ -101,6 +102,12 @@ function chart(ws){if(ws.length<2)return '<p class="empty">Registra almeno due p
   return '<div class="box"><svg viewBox="0 0 300 120" width="100%" role="img" aria-label="Andamento del peso"><polygon points="'+P+','+(H-P)+' '+line+' '+(W-P)+','+(H-P)+'" fill="var(--acc)" opacity=".2"/><polyline class="draw" pathLength="1" points="'+line+'" fill="none" stroke="var(--acc2)" stroke-width="2.5" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px var(--acc2))"/>'+pts.map(function(p){return'<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="var(--acc2)"/>'}).join('')+'</svg></div>'}
 var MEALS=['Colazione','Pranzo','Cena','Spuntino'];
 var MET={Cyclette:6.8,Corsa:9,Camminata:3.8,Altro:5};
+var WALK=[[3.2,2.8],[4,3],[4.8,3.5],[5.6,4.3],[6.4,5],[7.2,7]];
+function metFor(t,km,min){
+  var v=km&&min?km/(min/60):0;
+  if(t==='Corsa'&&v>=4&&v<=25)return Math.max(6,v);
+  if(t==='Camminata'&&v>=2&&v<=9){if(v<=WALK[0][0])return WALK[0][1];for(var i=1;i<WALK.length;i++){if(v<=WALK[i][0]){var a=WALK[i-1],b=WALK[i];return a[1]+(b[1]-a[1])*(v-a[0])/(b[0]-a[0])}}return WALK[WALK.length-1][1]}
+  return MET[t]}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function num(v){var x=parseFloat(String(v).replace(',','.'));return isFinite(x)&&x>0?x:0}
 function fmt(x,d){return x.toLocaleString('it-IT',{maximumFractionDigits:d||0})}
@@ -111,7 +118,7 @@ function val(id){var e=document.getElementById(id);return e?e.value:''}
 
 function render(){
   var f=S.food.filter(function(x){return x.d===day}),w=S.work.filter(function(x){return x.d===day});
-  var eat=f.reduce(function(a,x){return a+x.kcal},0),out=w.reduce(function(a,x){return a+x.kcal},0),pd=w.reduce(function(a,x){return a+(x.ped||0)},0);
+  var eat=f.reduce(function(a,x){return a+x.kcal},0),out=w.reduce(function(a,x){return a+x.kcal},0),pd=w.reduce(function(a,x){return a+(x.ped||0)},0),sd=w.reduce(function(a,x){return a+(x.st||0)},0);
   var today=key(new Date()),lim=new Date();lim.setDate(lim.getDate()-6);var lk=key(lim);
   var pw=S.work.filter(function(x){return x.d>=lk&&x.d<=today}).reduce(function(a,x){return a+(x.ped||0)},0);
   var lab=new Date(day+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
@@ -119,7 +126,9 @@ function render(){
   h+='<div class="stats'+(anim?' go3d':'')+'"><div class="stat"><b>'+fmt(eat)+'</b><span>kcal mangiate</span>'+(S.goal?'<small>obiettivo '+fmt(S.goal)+'</small><div class="bar"><u style="width:'+Math.min(100,Math.round(eat/S.goal*100))+'%"></u></div>':'')+'</div>';
   h+='<div class="stat"><b>'+fmt(out)+'</b><span>kcal bruciate</span></div>';
   h+='<div class="stat"><b>'+fmt(eat-out)+'</b><span>bilancio</span></div>';
-  h+='<div class="stat"><b>'+fmt(pd)+'</b><span>pedalate</span><small>ultimi 7 giorni: '+fmt(pw)+'</small></div></div>';
+  h+='<div class="stat"><b>'+fmt(pd)+'</b><span>pedalate</span><small>ultimi 7 giorni: '+fmt(pw)+'</small></div>';
+  var sw=S.work.filter(function(x){return x.d>=lk&&x.d<=today}).reduce(function(a,x){return a+(x.st||0)},0);
+  h+='<div class="stat"><b>'+fmt(sd)+'</b><span>passi</span><small>ultimi 7 giorni: '+fmt(sw)+'</small></div></div>';
   h+='<div class="tabs">';
   [['cibo','Cibo'],['all','Allenamento'],['peso','Peso']].forEach(function(t){h+='<button data-a="tab" data-v="'+t[0]+'" aria-pressed="'+(tab===t[0])+'">'+t[1]+'</button>'});
   h+='</div>';
@@ -140,7 +149,7 @@ function render(){
     h+='<div class="row"><input id="wc" inputmode="numeric" placeholder="kcal (se vuoto, stima)"></div><button class="go" data-a="addWork">Aggiungi allenamento</button></div>';
     h+='<p class="empty">Ultimi 7 giorni: '+fmt(wk)+' minuti di allenamento.</p>';
     if(!w.length)h+='<p class="empty">Nessun allenamento registrato per questo giorno.</p>';
-    else{h+='<div class="box">';w.forEach(function(x){h+='<div class="item"><div>'+esc(x.type)+'<small>'+fmt(x.min)+' min'+(x.km?' · '+fmt(x.km,2)+' km':'')+(x.ped?' · '+fmt(x.ped)+' pedalate · '+fmt(x.ped/x.min)+'/min':'')+'</small></div><em class="w">'+(x.est?'~':'')+fmt(x.kcal)+' kcal</em><button class="x" data-a="del" data-t="work" data-id="'+x.id+'" aria-label="Elimina">×</button></div>'});h+='</div>'}
+    else{h+='<div class="box">';w.forEach(function(x){h+='<div class="item"><div>'+esc(x.type)+'<small>'+fmt(x.min)+' min'+(x.km?' · '+fmt(x.km,2)+' km':'')+(x.ped?' · '+fmt(x.ped)+' pedalate · '+fmt(x.ped/x.min)+'/min':'')+(x.st?' · '+fmt(x.st)+' passi · '+fmt(x.st/x.min)+'/min':'')+'</small></div><em class="w">'+(x.est?'~':'')+fmt(x.kcal)+' kcal</em><button class="x" data-a="del" data-t="work" data-id="'+x.id+'" aria-label="Elimina">×</button></div>'});h+='</div>'}
   }
   if(tab==='peso'){
     var ws=sortedW(),first=ws.length?ws[0].kg:0;
@@ -152,7 +161,7 @@ function render(){
     h+='</div>';
     h+='<div class="box"><div class="row"><button class="go" data-a="exp">Esporta backup</button><button class="go" data-a="imp">Importa backup</button></div><input id="imp" type="file" accept="application/json" hidden></div>';
   }
-  h+='<p class="note">I dati restano salvati su questo dispositivo, nel browser in cui apri la pagina. Le kcal degli alimenti sono valori medi indicativi per 100 g. La stima delle kcal bruciate usa il tuo ultimo peso registrato.</p>';
+  h+='<p class="note">I dati restano salvati su questo dispositivo, nel browser in cui apri la pagina. Le kcal degli alimenti sono valori medi indicativi per 100 g. La stima delle kcal bruciate usa il tuo ultimo peso registrato e, per corsa e camminata, la velocità se inserisci i km.</p>';
   document.getElementById('app').innerHTML=h;anim=false;
 }
 
@@ -164,7 +173,7 @@ document.addEventListener('click',function(e){
   else if(a==='tab')tab=b.dataset.v;
   else if(a==='addFood'){var k=num(val('fk')),nm=val('fn').trim(),g=num(val('fg'));if(!k||!nm){alert('Inserisci cosa hai mangiato e i grammi (o le kcal).');return}S.food.push({id:uid(),d:day,meal:val('meal'),name:nm,kcal:Math.round(k),g:Math.round(g)})}
   else if(a==='addWork'){var m=num(val('wm'));if(!m){alert('Inserisci i minuti di allenamento.');return}var t=val('wt'),kc=num(val('wc'));
-    S.work.push({id:uid(),d:day,type:t,min:Math.round(m),km:num(val('wk')),ped:Math.round(num(val('wp'))),kcal:kc?Math.round(kc):Math.round(MET[t]*lastKg()*m/60),est:!kc})}
+    S.work.push({id:uid(),d:day,type:t,min:Math.round(m),km:num(val('wk')),ped:t==='Cyclette'?Math.round(num(val('wp'))):0,st:(t==='Corsa'||t==='Camminata')?Math.round(num(val('wp'))):0,kcal:kc?Math.round(kc):Math.round(metFor(t,num(val('wk')),m)*lastKg()*m/60),est:!kc})}
   else if(a==='addW'){var kg=num(val('kg'));if(!kg){alert('Inserisci il peso in kg.');return}S.weight.push({id:uid(),d:day,kg:kg})}
   else if(a==='goal'){S.goal=Math.round(num(val('goal')))}
   else if(a==='exp'){var bl=new Blob([JSON.stringify(S)],{type:'application/json'}),u=URL.createObjectURL(bl),l=document.createElement('a');l.href=u;l.download='diario-backup-'+key(new Date())+'.json';l.click();setTimeout(function(){URL.revokeObjectURL(u)},1000);return}
@@ -182,6 +191,7 @@ document.addEventListener('input',function(e){
   if(g)fk.value=kc;
   hi.textContent=f.k+' kcal ogni 100 g'+(g?' → '+kc+' kcal':'');
 });
+document.addEventListener('change',function(e){if(e.target.id!=='wt')return;var p=document.getElementById('wp'),t=e.target.value;p.value='';p.hidden=t==='Altro';p.placeholder=t==='Cyclette'?'Pedalate':'Passi'});
 document.addEventListener('pointermove',function(e){var c=e.target.closest&&e.target.closest('.stat');if(!c)return;var r=c.getBoundingClientRect();c.style.setProperty('--ry',((e.clientX-r.left)/r.width-.5)*14+'deg');c.style.setProperty('--rx',-((e.clientY-r.top)/r.height-.5)*14+'deg')});
 document.addEventListener('pointerout',function(e){var c=e.target.closest&&e.target.closest('.stat');if(c){c.style.removeProperty('--rx');c.style.removeProperty('--ry')}});
 document.addEventListener('change',function(e){if(e.target.id!=='imp'||!e.target.files[0])return;var r=new FileReader();r.onload=function(){try{var o=JSON.parse(r.result);if(!Array.isArray(o.food)||!Array.isArray(o.work)||!Array.isArray(o.weight))throw 0;S=Object.assign({food:[],work:[],weight:[],goal:0},o);save();render();alert('Backup importato.')}catch(x){alert('File di backup non valido.')}};r.readAsText(e.target.files[0])});
